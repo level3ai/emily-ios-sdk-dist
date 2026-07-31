@@ -1,0 +1,37 @@
+# Changelog
+
+All notable changes to the EmilyChat iOS SDK. This project follows
+[Semantic Versioning](https://semver.org/).
+
+## [1.2.0] - 2026-07-31
+
+First public release. The SDK now ships as a pre-built XCFramework resolved
+through Swift Package Manager; earlier versions were never published outside
+Level3AI.
+
+### Added
+
+- Privacy manifest (`PrivacyInfo.xcprivacy`) bundled in the framework: no
+  tracking, no collected data types, no required-reason API usage.
+
+### Changed
+
+- **Breaking:** the entry-point singleton is now `Emily.shared`, previously
+  `EmilyChat.shared`. The module name is unchanged, so `import EmilyChat` still
+  applies — only the type is renamed. A type whose name matches its module name
+  cannot be expressed in the generated `.swiftinterface`, which binary
+  distribution requires.
+- **Breaking:** `EmilyChatStyle` and `EmilyChatOptions.style` were removed.
+  Brand color, theme, header title, bubble colors and logos now come from the
+  tenant's server-side chat configuration. Drop the argument; move the values
+  to the Level3AI admin console.
+- **Breaking:** user attributes are now merged flat into the conversation,
+  matching the web SDK's `Emily.setAttributes({ … })`. Previously they were
+  nested one level deeper under an `attributes` key, so app-side identity did
+  not line up with what browser integrations produced. `setAttributes(_:)` and
+  `EmilyChatOptions.attributes` keep the same Swift signature — only the wire
+  format changed. Attribute keys colliding with the SDK's own init options are
+  dropped and reported as `.bridgeError(stage: "init.attributes", …)`.
+- The SDK now ships as a pre-built XCFramework rather than source. Its public
+  enums are therefore non-frozen: add `@unknown default` when switching over
+  `EmilyChatEvent` (a warning today, an error under the Swift 6 language mode).

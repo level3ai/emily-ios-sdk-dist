@@ -1,0 +1,22 @@
+# This is a distribution-only repo: it should contain nothing but the SPM
+# manifest and the docs that go with it. Anything a local `swift build` /
+# Xcode session leaves behind stays out.
+
+# SwiftPM
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# Xcode
+DerivedData/
+xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
