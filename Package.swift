@@ -23,8 +23,8 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "EmilyChat",
-            url: "https://static.lv3.ai/ios/EmilyChat-1.2.0.xcframework.zip",
-            checksum: "47ba884eb8a36e6c29b6ac5d39032d63523b0ddf53b60f9855749771fd5fb6e7"
+            url: "https://static.lv3.ai/ios/EmilyChat-1.2.1.xcframework.zip",
+            checksum: "b85ae30f64313b0978a44f30321bd86feadf7713a5ce0424f403f2c484f24033"
         )
     ]
 )

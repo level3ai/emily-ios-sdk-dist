@@ -1,0 +1,25 @@
+{
+  "name": "EmilyChat",
+  "version": "1.2.1",
+  "summary": "Embeddable Emily customer-support chat for iOS.",
+  "description": "Embeddable customer-support chat, powered by a WKWebView that hosts the Emily web bundle from the Level3 CDN. The native layer owns lifecycle, a small JSON bridge, and a typed Swift API; all UI ships from the web bundle, so visual changes go live without an App Store release.",
+  "homepage": "https://lv3.ai",
+  "authors": {
+    "Level3 AI": "support@lv3.ai"
+  },
+  "license": {
+    "type": "MIT",
+    "text": "MIT License\n\nCopyright (c) 2026 Level3 AI\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+  },
+  "platforms": {
+    "ios": "14.0"
+  },
+  "swift_versions": [
+    "5.9"
+  ],
+  "source": {
+    "http": "https://static.lv3.ai/ios/EmilyChat-1.2.1.xcframework.zip",
+    "sha256": "b85ae30f64313b0978a44f30321bd86feadf7713a5ce0424f403f2c484f24033"
+  },
+  "vendored_frameworks": "EmilyChat.xcframework"
+}

@@ -3,6 +3,12 @@
 All notable changes to the EmilyChat iOS SDK. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-08-04
+
+Maintenance release. **No source or API changes from 1.2.0** — the SDK is
+rebuilt and re-published to exercise the release pipeline end to end. Upgrading
+is optional; 1.2.0 remains available and functionally identical.
+
 ## [1.2.0] - 2026-07-31
 
 First public release. The SDK now ships as a pre-built XCFramework resolved

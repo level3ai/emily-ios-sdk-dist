@@ -4,7 +4,7 @@ Embeddable customer-support chat for iOS, powered by a `WKWebView` that hosts
 the Emily web bundle from the Level3 CDN.
 
 * **Minimum iOS:** 14.0
-* **Distribution:** Swift Package Manager (pre-built XCFramework)
+* **Distribution:** Swift Package Manager or CocoaPods (pre-built XCFramework)
 * **Surface area:** one singleton (`Emily.shared`) + one `UIViewController` (`EmilyChatViewController`)
 
 The native layer owns lifecycle, a small JSON bridge, and a typed Swift API.
@@ -15,6 +15,8 @@ bundle, so visual changes go live without a new App Store build.
 
 ## Installation
 
+### Swift Package Manager
+
 In Xcode → `File ▸ Add Package Dependencies…`:
 
 ```
@@ -24,10 +26,37 @@ https://github.com/level3ai/emily-ios-sdk-dist
 or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "1.2.0")
+.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "1.2.1")
 ```
 
 then add `"EmilyChat"` to your target's dependencies.
+
+### CocoaPods
+
+The pod is served from our own spec repo rather than the public CocoaPods
+trunk, which stops accepting new versions on 2 December 2026. Add the source
+line once, alongside whatever sources you already use:
+
+```ruby
+source 'https://cdn.cocoapods.org/'
+source 'https://github.com/level3ai/emily-ios-sdk-dist.git'
+
+target 'YourApp' do
+  pod 'EmilyChat', '~> 1.2'
+end
+```
+
+Both package managers install the identical binary — the podspec and the Swift
+package point at the same XCFramework and verify the same SHA-256.
+
+> **Pick one, never both.** Integrating through SPM *and* CocoaPods in the same
+> app embeds two copies of the framework, which surfaces as duplicate symbols
+> at link time or `Class EmilyChat… is implemented in both …` at runtime.
+>
+> The case to watch for: your app integrates the SDK natively via SPM *and*
+> also embeds a Flutter or React Native module that pulls the pod. Nothing
+> detects this at build time — if you have both a native and a cross-platform
+> surface in one app, make sure they resolve EmilyChat the same way.
 
 You need a **service SID** (`LV3-` + 32 hex chars) from your Level3AI contact,
 and your app's bundle id has to be allow-listed on that service before the chat
