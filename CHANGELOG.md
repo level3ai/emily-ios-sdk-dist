@@ -3,6 +3,27 @@
 All notable changes to the EmilyChat iOS SDK. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.2] - Unreleased
+
+The WebView now always loads the sid-routed CDN container
+(`https://sdk.lv3.ai/native/mobile.html?sid=<serviceSid>`): the serviceSid
+alone decides the environment *and* any server-side version pin, so there is
+no environment to select client-side anymore.
+
+### Breaking
+
+- `EmilyChatEnvironment` is removed.
+- `EmilyChatOptions.environment` is replaced by an optional
+  `containerURL: URL?` — `nil` (default) means the sid-routed CDN; a custom
+  URL (local dev / on-prem) is loaded verbatim, with no sid appended.
+
+### Fixed
+
+- Keyboard: the WebView now resizes to the keyboard's top edge instead of
+  letting WebKit scroll the document (which left a white band between the chat
+  input and the keyboard). The default form accessory bar (↑ ↓ ✓) is removed,
+  and dragging down on the message list dismisses the keyboard interactively.
+
 ## [1.2.1] - 2026-08-04
 
 Maintenance release. **No source or API changes from 1.2.0** — the SDK is

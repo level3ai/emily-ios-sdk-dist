@@ -192,7 +192,11 @@ Emily.shared.dismiss()     // (optional) close the chat surface
 ### `EmilyChatOptions`
 
 `serviceSid` (required), `userToken`, `locale`, `metadata`, `attributes`, plus an
-`environment` selector (`.production` / `.staging` / `.custom(url:)`).
+optional `containerURL` override. By default the WebView loads the sid-routed CDN
+(`https://sdk.lv3.ai/native/mobile.html?sid=<serviceSid>`) — the sid alone
+decides the environment and any server-side version pin, so there is nothing to
+select per environment. Set `containerURL` only for local development or an
+on-prem deployment; it is loaded verbatim.
 
 `metadata` and `attributes` take `[String: Any]` where every value must be
 JSON-serializable via `JSONSerialization`; anything else surfaces as
@@ -215,6 +219,13 @@ There is no style or branding option in the API. Brand color, light/dark theme,
 header title and alignment, bubble colors and logos all come from your chat
 configuration on the Level3AI server, which the web bundle fetches at boot.
 Ask your Level3AI contact to change them — no app release needed.
+
+### Keyboard
+
+Handled by the SDK. The WebView's bottom edge tracks the keyboard, so the chat
+input sits flush above it with no white gap; WKWebView's default form
+accessory bar (↑ ↓ ✓) is removed — the widget draws its own input UI — and
+dragging down on the message list dismisses the keyboard interactively.
 
 ---
 
