@@ -3,7 +3,82 @@
 All notable changes to the EmilyChat iOS SDK. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [1.2.2] - Unreleased
+## [2.0.0] - 2026-08-17
+
+Company-wide namespace rebrand from `ai.lv3` to `ai.level3`. The Swift API,
+module name (`EmilyChat`), and SPM/CocoaPods artifact names are unchanged —
+on iOS the only behavioral change is the diagnostics log identifier. The major
+version aligns with the Android SDK's new Maven coordinate
+(`ai.level3.emily:emily-chat:2.0.0`), where the rename is source-breaking.
+
+### Breaking
+
+- The system-log subsystem is now `ai.level3.emily.chat` (was
+  `ai.lv3.emily.chat`). Update any saved Console.app filters or scripts:
+  `log stream --predicate 'subsystem == "ai.level3.emily.chat"' --level debug`.
+
+## [1.2.3] - 2026-08-13
+
+This release narrows the public API to what a host app actually drives: one
+singleton, the options it hands in, and the events it gets back.
+
+### Added
+
+- `EmilyChatOptions.host` — base URL of your self-hosted Emily gateway, for
+  private (on-premises) deployments. `nil` (the default) keeps Level3AI's
+  standard cloud gateway.
+
+### Breaking
+
+- `present(from:animated:completion:)` and `dismiss(animated:completion:)` are
+  removed; `open(from:animated:completion:)` and `close(animated:completion:)`
+  — previously aliases — are now the only names, matching the browser JS API
+  and the Android / Flutter / React Native packages. Rename call sites 1:1;
+  parameters and behaviour are unchanged.
+- `Emily.shared.onEvent` and the `EmilyChatEvent` type are removed. The SDK now
+  handles everything they were for:
+  - **Closing.** The chat dismisses itself when the user taps its close
+    control, so the `.closeRequest` handler you had is no longer needed —
+    delete it. `Emily.shared.close()` still closes it programmatically.
+  - **Load failures.** If the chat can't load — or the page loads but never
+    becomes ready within 15 seconds — the SDK shows a built-in
+    "Chat unavailable" page with retry and close buttons instead of leaving the
+    user on a blank full-screen modal.
+  - **Diagnostics.** Everything else (a `metadata` value that isn't
+    JSON-serializable, an attribute using a reserved name, `configure(_:)` not
+    called before presenting, the load failure itself) goes to the system log
+    under the `ai.lv3.emily.chat` subsystem. Read it in Console.app or with
+    `log stream --predicate 'subsystem == "ai.lv3.emily.chat"' --level debug`.
+- `EmilyChatOptions.attributes` is removed, along with the `attributes:`
+  argument on `EmilyChatOptions.init`. `Emily.shared.setAttributes(_:)` is now
+  the only entry point for user attributes: identity data changes during a
+  session, while the configuration is handed in once. Move the dictionary from
+  your `EmilyChatOptions(…)` call to a `setAttributes(_:)` call — anything set
+  before the first present still reaches the chat at boot. As a side effect,
+  `setAttributes(_:)` now also works before `configure(_:)`, where it used to be
+  dropped.
+- `EmilyChatViewController` is now internal — the chat is reached only through
+  `Emily.shared.open(from:)`, which owns the presentation. The class, its
+  initializer, its properties and its delegate methods are no longer public,
+  and presenting the chat inside your own navigation stack is no longer
+  supported.
+- `Emily.shared.presentedController` is no longer public for the same reason.
+- `Emily.shared.options` is now internal. Your app is the source of that
+  configuration, and keeping it private means a configured `userToken` is not
+  readable by other code linked into the app.
+- `EmilyChatEvent.ready(sdkVersion:)` becomes `EmilyChatEvent.ready`. The
+  chat's own version is managed by Level3AI and is not something to branch on;
+  `switch` statements binding the associated value need updating.
+- `Emily.PresentationStyle` is removed, along with the `style:` argument on
+  the open call. The chat is always a full-screen modal (slide-up, no
+  swipe-to-dismiss); the `.sheet` and `.pageSheet` presentations are gone.
+  Drop the argument — `Emily.shared.open(from: self)` is unchanged.
+- `EmilyChatOptions.containerURL` is removed, along with the `containerURL:`
+  argument on `EmilyChatOptions.init`. Your `serviceSid` already selects the
+  right service and configuration, so there is no address to point the SDK at.
+  Delete the argument from your `EmilyChatOptions(…)` call.
+
+## [1.2.2] - 2026-08-06
 
 The WebView now always loads the sid-routed CDN container
 (`https://sdk.lv3.ai/native/mobile.html?sid=<serviceSid>`): the serviceSid
