@@ -36,7 +36,7 @@ https://github.com/level3ai/emily-ios-sdk-dist
 or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "1.2.3")
+.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "2.1.0")
 ```
 
 then add `"EmilyChat"` to your target's dependencies.
@@ -153,6 +153,64 @@ Emily.shared.logout()      // clears userToken + attributes, locally and in the 
 Emily.shared.close()       // (optional) close the chat surface
 ```
 
+Works with or without the chat on screen: when it isn't, the SDK briefly runs
+the logout through an off-screen WebView so the backend session ends and the
+push registration is cleaned up all the same.
+
+### Push notifications
+
+Your app owns APNs registration — the permission prompt,
+`registerForRemoteNotifications()`, and the `UNUserNotificationCenterDelegate`
+— the SDK never asks for permission itself. Wire Emily in at three points:
+
+```swift
+// 1. Relay the device token (AppDelegate).
+func application(_ application: UIApplication,
+                 didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    #if DEBUG
+    Emily.shared.setPushToken(deviceToken, environment: .sandbox)
+    #else
+    Emily.shared.setPushToken(deviceToken, environment: .production)
+    #endif
+}
+
+// 2. Open the chat when the user taps an Emily notification.
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                            didReceive response: UNNotificationResponse,
+                            withCompletionHandler completionHandler: @escaping () -> Void) {
+    let userInfo = response.notification.request.content.userInfo
+    if Emily.shared.handleNotificationTap(userInfo, from: rootViewController) {
+        completionHandler()
+        return
+    }
+    // ... your own notification routing ...
+    completionHandler()
+}
+
+// 3. (Optional) No system banner for the chat reply the user is already reading.
+func userNotificationCenter(_ center: UNUserNotificationCenter,
+                            willPresent notification: UNNotification,
+                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    if Emily.isEmilyNotification(notification.request.content.userInfo),
+       Emily.shared.isChatOpen {
+        completionHandler([])
+        return
+    }
+    completionHandler([.banner, .list, .sound])
+}
+```
+
+Opening the chat also clears Emily's already-delivered notifications from
+Notification Center automatically — a user who reaches the chat on their own
+isn't left with stale "new message" alerts. Nothing to wire up.
+
+`setPushToken` works before `configure(_:)`, keeps the token in memory only
+(the SDK persists nothing), and the token survives `logout()` — it identifies
+the device, not the user. Use `.sandbox` for Xcode-installed builds and
+`.production` for TestFlight / App Store: APNs tokens are only deliverable
+through the environment that issued them. `Emily.isEmilyNotification(_:)` is
+static and thread-safe, so it fits anywhere in your notification plumbing.
+
 ### Localization
 
 Pass a BCP-47 tag as `locale` (`"en"`, `"zh-Hans"`, …). Leave it `nil` and the
@@ -170,7 +228,11 @@ chat picks a language itself.
 | `open(from:animated:completion:)` | Opens the chat, always full screen. |
 | `close(animated:completion:)` | Closes the chat. |
 | `setAttributes(_:)` | Sets user attributes on the conversation. |
-| `logout()` | Clears the user identity locally and in the live chat. |
+| `logout()` | Clears the user identity locally and in the web layer — through the live chat, or off-screen when none is presented. |
+| `setPushToken(_:environment:)` -> `Emily` | Relays the APNs device token (`Data` or hex `String`). Callable before `configure(_:)`; `@discardableResult`. |
+| `handleNotificationTap(_:from:animated:completion:)` -> `Bool` | Opens the chat for a tapped Emily notification; `false` = not Emily's (or not configured), route it yourself. |
+| `isChatOpen` | Whether the chat modal is currently on screen. |
+| `isEmilyNotification(_:)` (static) | Whether a notification payload belongs to Emily. Any thread. |
 
 All calls are main-actor isolated, which is where UIKit code already runs.
 

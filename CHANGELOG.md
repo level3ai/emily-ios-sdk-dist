@@ -3,6 +3,48 @@
 All notable changes to the EmilyChat iOS SDK. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-08-26
+
+Push-notification support. The host app owns APNs registration — the
+permission prompt, `registerForRemoteNotifications()`, and the
+notification-center delegate — the SDK never asks for permission itself. It
+relays the device token to the Emily service and routes the taps that belong
+to it into the chat.
+
+### Added
+
+- `Emily.shared.setPushToken(_:environment:)` — hand over the APNs device
+  token, as the raw `Data` from the AppDelegate callback or an
+  already-hex-encoded `String`. Legal before `configure(_:)`; the token is
+  held in memory only (the SDK persists nothing — its privacy manifest stays
+  empty), survives `logout()` (it identifies the device, not the user), and
+  is forwarded to the chat whenever one boots.
+- `EmilyPushEnvironment` — `.production` (the default) / `.sandbox`, so the
+  backend pushes through the APNs environment that issued the token:
+  `.sandbox` for Xcode-installed builds, `.production` for TestFlight /
+  App Store.
+- `Emily.isEmilyNotification(_:)` — whether a notification payload belongs to
+  Emily. Static, callable from any thread and before `configure(_:)`.
+- `Emily.shared.handleNotificationTap(_:from:animated:completion:)` — opens
+  the chat for a tapped Emily notification. Returns `false` (so your own
+  routing takes over) for non-Emily payloads or when `configure(_:)` hasn't
+  run.
+- `Emily.shared.isChatOpen` — whether the chat modal is on screen; use it in
+  `willPresent` to suppress the system banner for the chat reply the user is
+  already reading.
+- Opening the chat (including returning to it from the background) clears
+  Emily's already-delivered notifications from Notification Center, so a user
+  who reaches the chat on their own isn't left with stale "new message"
+  alerts. Automatic — nothing for the host app to wire up.
+
+### Changed
+
+- `logout()` now flushes the logout through the Emily web layer even when the
+  chat is **not** on screen, by briefly booting the chat container in an
+  off-screen WebView — so the backend session ends and the push token is
+  unregistered no matter when you call it. No API change; with the chat open
+  the behavior is as before.
+
 ## [2.0.0] - 2026-08-17
 
 Company-wide namespace rebrand from `ai.lv3` to `ai.level3`. The Swift API,
