@@ -3,6 +3,23 @@
 All notable changes to the EmilyChat iOS SDK. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-09-04
+
+The SDK now identifies itself to the Emily service on every request, so a
+problem reported from an app can be traced to the SDK version that produced
+it instead of being indistinguishable from a browser session.
+
+### Changed
+
+- Requests made by the embedded chat now carry `X-Native-Platform: ios`,
+  `X-Native-Sdk-Version: <this SDK's version>` and
+  `X-Native-App-Id: <the app's bundle identifier>`, so the service can tell
+  which app a request comes from and match it against the channel's
+  configured Bundle ID. Nothing to configure. The only new data is the app's
+  own bundle identifier — it names the app, not the user or the device: the
+  device identifier already on those requests is the chat widget's own, and
+  the SDK still persists nothing (its privacy manifest stays empty).
+
 ## [2.1.0] - 2026-08-26
 
 Push-notification support. The host app owns APNs registration — the

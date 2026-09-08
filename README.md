@@ -36,7 +36,7 @@ https://github.com/level3ai/emily-ios-sdk-dist
 or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "2.1.0")
+.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "2.2.0")
 ```
 
 then add `"EmilyChat"` to your target's dependencies.
@@ -156,6 +156,33 @@ Emily.shared.close()       // (optional) close the chat surface
 Works with or without the chat on screen: when it isn't, the SDK briefly runs
 the logout through an off-screen WebView so the backend session ends and the
 push registration is cleaned up all the same.
+
+### Attachments and voice input
+
+Taking a photo or recording a voice message inside the chat needs the matching
+iOS permission, and the usage description for it has to come from your app's
+`Info.plist` — the SDK does not add it for you. Declare the keys your Channel's
+inputs need:
+
+```xml
+<!-- Image or video upload enabled on your Channel -->
+<key>NSCameraUsageDescription</key>
+<string>Lets you take a photo to attach to your conversation.</string>
+
+<!-- Voice input or video upload enabled on your Channel -->
+<key>NSMicrophoneUsageDescription</key>
+<string>Used to record voice messages in support chat.</string>
+```
+
+Without the camera key, iOS terminates the app the moment a user taps
+**Take Photo** (or **Take Photo or Video**) in the attachment picker; the same
+happens to a video recording without the microphone key. Without the
+microphone key the chat's microphone button does not appear at all. Picking an
+existing photo or file needs no key.
+
+Voice messages need SDK 2.2.0 or later; on earlier versions the microphone
+button does not appear either. iOS shows its standard permission alert the
+first time a user takes a photo or starts a recording.
 
 ### Push notifications
 
