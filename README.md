@@ -36,7 +36,7 @@ https://github.com/level3ai/emily-ios-sdk-dist
 or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "2.2.0")
+.package(url: "https://github.com/level3ai/emily-ios-sdk-dist.git", from: "3.0.0")
 ```
 
 then add `"EmilyChat"` to your target's dependencies.
@@ -66,34 +66,54 @@ Both package managers install the identical binary.
 
 ## Quick start
 
+Configure at launch, hand over the user when you have one, open when they ask.
+
 ```swift
 import EmilyChat
 
-Emily.shared
-    .configure(EmilyChatOptions(serviceSid: "LV3-YOUR-SERVICE-SID"))
-    .open(from: self)
+// 1. At launch — AppDelegate, SceneDelegate or your App's init.
+Emily.shared.configure(EmilyChatOptions(serviceSid: "LV3-YOUR-SERVICE-SID"))
+
+// 2. Whenever you know who the user is.
+Emily.shared.setUserToken(session.token)
+
+// 3. When they tap Support.
+Emily.shared.open(from: self)
 ```
 
-A fuller setup that identifies the user:
+In a real app:
 
 ```swift
 import UIKit
 import EmilyChat
+
+@main
+final class AppDelegate: UIResponder, UIApplicationDelegate {
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        Emily.shared.configure(
+            EmilyChatOptions(
+                serviceSid: "LV3-YOUR-SERVICE-SID",
+                locale: Locale.current.identifier
+            )
+        )
+        return true
+    }
+}
 
 final class SupportButton: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Configure once — in AppDelegate, or any time before the first open.
-        Emily.shared.configure(
-            EmilyChatOptions(
-                serviceSid: "LV3-YOUR-SERVICE-SID",
-                userToken: Session.current?.token,
-                locale: Locale.current.identifier,
-                metadata: ["plan": "pro", "tenantId": 42]
-            )
-        )
+        // The user is known here, not at launch. Setting it now is fine:
+        // it reaches the chat on the next open.
+        Emily.shared
+            .setUserToken(Session.current?.token)
+            .setMetadata(["plan": "pro", "tenantId": 42])
     }
 
     @IBAction func openChat() {
@@ -102,15 +122,52 @@ final class SupportButton: UIViewController {
 }
 ```
 
+Every setter returns `Emily` and is `@discardableResult`, so chain them or
+call them one by one, whichever reads better.
+
 Diagnostics go to the system log
 (`log stream --predicate 'subsystem == "ai.level3.emily.chat"' --level debug`).
-
-`configure(_:)` is `@discardableResult`, so calling it without chaining is
-fine.
 
 ---
 
 ## Common tasks
+
+### Identify the user
+
+```swift
+Emily.shared.setUserToken(session.token)
+```
+
+The signed token your backend issues; Emily verifies it and trusts that
+identity for the conversation. Pass `nil` to go back to an anonymous chat.
+
+Takes effect on the next `open(from:)`. A chat already on screen keeps the
+identity it booted with.
+
+### Attach context to the conversation
+
+```swift
+Emily.shared.setMetadata(["plan": "pro", "tenantId": 42])
+```
+
+Context that describes the conversation rather than the person (`plan`,
+`tenantId`, `pageUrl`, …). It **replaces** rather than merges, so pass the
+whole dictionary each time; `nil` clears it.
+
+**Set it before `open(from:)`, and only a new conversation picks it up.**
+Metadata is attached at the moment a conversation is created, which has two
+consequences worth knowing:
+
+- Calling it while the chat is on screen does nothing to that chat.
+- If the user still has a conversation in progress, opening resumes it and the
+  metadata is ignored. It applies to the next conversation actually created.
+
+For anything that has to reach a live chat, or update a conversation already
+under way, use `setAttributes(_:)` below.
+
+Values must be JSON-serializable via `JSONSerialization` — the same rule
+applies to `setAttributes(_:)`. Anything else is logged and skipped instead of
+crashing.
 
 ### Set user attributes
 
@@ -121,16 +178,11 @@ Emily.shared.setAttributes([
 ])
 ```
 
-`setAttributes(_:)` merges user attributes (name, email, custom fields…) into
-the conversation. Call it at any point — the values reach the live chat if one
-is open, and are kept for the next one.
+Who the user is: name, email, plan, your own CRM ids. Unlike `setMetadata(_:)`
+it **merges**, so you can add fields as you learn them.
 
-### Attach context to every message
-
-`metadata` travels with the conversation (`plan`, `tenantId`, `pageUrl`, …) and
-takes `[String: Any]` where every value must be JSON-serializable via
-`JSONSerialization` — the same rule applies to what you hand
-`setAttributes(_:)`. Anything else is logged and skipped instead of crashing.
+Call it at any point — the values reach the chat if one is already on screen,
+and are kept for the next one.
 
 ### Presentation
 
@@ -149,13 +201,13 @@ programmatically.
 ### Log out
 
 ```swift
-Emily.shared.logout()      // clears userToken + attributes, locally and in the live chat
+Emily.shared.logout()      // clears the token, metadata and attributes, locally and in the live chat
 Emily.shared.close()       // (optional) close the chat surface
 ```
 
-Works with or without the chat on screen: when it isn't, the SDK briefly runs
-the logout through an off-screen WebView so the backend session ends and the
-push registration is cleaned up all the same.
+Works with or without the chat on screen — either way the backend session
+ends and the push registration is cleaned up. The next chat starts anonymous
+until you hand over a new token.
 
 ### Attachments and voice input
 
@@ -179,10 +231,6 @@ Without the camera key, iOS terminates the app the moment a user taps
 happens to a video recording without the microphone key. Without the
 microphone key the chat's microphone button does not appear at all. Picking an
 existing photo or file needs no key.
-
-Voice messages need SDK 2.2.0 or later; on earlier versions the microphone
-button does not appear either. iOS shows its standard permission alert the
-first time a user takes a photo or starts a recording.
 
 ### Push notifications
 
@@ -240,8 +288,11 @@ static and thread-safe, so it fits anywhere in your notification plumbing.
 
 ### Localization
 
-Pass a BCP-47 tag as `locale` (`"en"`, `"zh-Hans"`, …). Leave it `nil` and the
-chat picks a language itself.
+Set `locale` on `EmilyChatOptions` to a BCP-47 tag (`"en"`, `"zh-Hans"`, …).
+Leave it `nil` and the chat picks a language itself.
+
+To change it later, call `configure(_:)` again with the new value — when the
+user actually switches language, not routinely before every open.
 
 ---
 
@@ -251,27 +302,33 @@ chat picks a language itself.
 
 | Member | Purpose |
 | --- | --- |
-| `configure(_:)` -> `Emily` | Stores the options used by the next `open(from:)`. Returns `self` for chaining; `@discardableResult`. |
+| `configure(_:)` -> `Emily` | Stores the configuration. Call it once, at launch. `@discardableResult`. |
 | `open(from:animated:completion:)` | Opens the chat, always full screen. |
+| `setUserToken(_:)` -> `Emily` | Sets the end-user token used from the next `open(from:)`; `nil` = anonymous. `@discardableResult`. |
+| `setMetadata(_:)` -> `Emily` | Replaces the context attached to the next conversation **created**; set it before `open(from:)`, and note a resumed conversation ignores it. `nil` clears it. `@discardableResult`. |
+| `setAttributes(_:)` -> `Emily` | Merges user attributes into the conversation, reaching a chat already on screen. `@discardableResult`. |
 | `close(animated:completion:)` | Closes the chat. |
-| `setAttributes(_:)` | Sets user attributes on the conversation. |
-| `logout()` | Clears the user identity locally and in the web layer — through the live chat, or off-screen when none is presented. |
-| `setPushToken(_:environment:)` -> `Emily` | Relays the APNs device token (`Data` or hex `String`). Callable before `configure(_:)`; `@discardableResult`. |
+| `logout()` | Clears the user token, metadata and attributes, and ends the backend session. Works whether or not the chat is on screen. |
+| `setPushToken(_:environment:)` -> `Emily` | Relays the APNs device token (`Data` or hex `String`). `@discardableResult`. |
 | `handleNotificationTap(_:from:animated:completion:)` -> `Bool` | Opens the chat for a tapped Emily notification; `false` = not Emily's (or not configured), route it yourself. |
 | `isChatOpen` | Whether the chat modal is currently on screen. |
 | `isEmilyNotification(_:)` (static) | Whether a notification payload belongs to Emily. Any thread. |
 
 All calls are main-actor isolated, which is where UIKit code already runs.
+Every setter also works before `configure(_:)`, so you can hand over a token,
+metadata, attributes or a push token in whatever order suits your app.
 
 ### `EmilyChatOptions`
 
 | Field | Type | Purpose |
 | --- | --- | --- |
 | `serviceSid` | `String` (required) | Your service identifier. |
-| `userToken` | `String?` | Identifies / authenticates the conversation owner. Omit for anonymous chats. |
 | `locale` | `String?` | BCP-47 language tag. `nil` = auto-detect. |
-| `metadata` | `[String: Any]?` | Free-form context sent with the conversation. JSON-safe values only. |
 | `host` | `String?` | Base URL of your self-hosted Emily gateway (e.g. `"https://example.lv3.ai/"`), for private (on-premises) deployments. `nil` = Level3AI's standard cloud gateway. |
+
+The user token, conversation metadata and user attributes describe the person
+rather than the app, so they have their own setters: `setUserToken(_:)`,
+`setMetadata(_:)` and `setAttributes(_:)`.
 
 ---
 

@@ -3,6 +3,92 @@
 All notable changes to the EmilyChat iOS SDK. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [3.0.0] - 2026-09-18
+
+Opening the chat is much faster, and `configure(_:)` is now what its name says:
+the tenant and environment your app talks to, handed in once at launch. Who is
+chatting, and what context the conversation carries, moved to two setters you
+can call at any point — which is what that data always was.
+
+The two changes are related. The SDK can only start loading the chat before the
+user asks for it if nothing in that first call has to wait for a sign-in.
+
+### Breaking
+
+- `EmilyChatOptions.userToken` is removed, along with the `userToken:` argument
+  on `EmilyChatOptions.init`. `Emily.shared.setUserToken(_:)` is now the only
+  entry point for the end-user token: the identity arrives when the user signs
+  in, while the configuration is handed in once at launch. Move the argument
+  from your `EmilyChatOptions(…)` call to a `setUserToken(_:)` call — anything
+  set before the first open still reaches the chat at boot. As a side effect,
+  `setUserToken(_:)` also works before `configure(_:)`, and passing `nil`
+  returns the next conversation to anonymous without a full `logout()`.
+
+  ```swift
+  // Before
+  Emily.shared.configure(
+      EmilyChatOptions(serviceSid: "LV3-…", userToken: session.token)
+  )
+
+  // After
+  Emily.shared.configure(EmilyChatOptions(serviceSid: "LV3-…"))
+  Emily.shared.setUserToken(session.token)
+  ```
+
+- `EmilyChatOptions.metadata` is removed, along with the `metadata:` argument
+  on `EmilyChatOptions.init`. `Emily.shared.setMetadata(_:)` is now the only
+  entry point for conversation metadata, for the same reason: context describes
+  the conversation, not the tenant. Move the dictionary from your
+  `EmilyChatOptions(…)` call to a `setMetadata(_:)` call. Unlike
+  `setAttributes(_:)` it replaces rather than merges, and `nil` clears it; the
+  JSON-safety rule is unchanged.
+
+  ```swift
+  // Before
+  Emily.shared.configure(
+      EmilyChatOptions(serviceSid: "LV3-…", metadata: ["plan": "pro"])
+  )
+
+  // After
+  Emily.shared.configure(EmilyChatOptions(serviceSid: "LV3-…"))
+  Emily.shared.setMetadata(["plan": "pro"])
+  ```
+
+### Added
+
+- The chat now starts loading in the background shortly after `configure(_:)`,
+  instead of leaving all of it until the first `open(from:)`. Call `configure`
+  once at app launch and the first open is much quicker — most of what used to
+  happen after the tap now happens before it.
+
+  The preload fetches the chat's own resources and its appearance settings. It
+  starts no conversation, signs nobody in and sends no message: that still
+  happens only when the chat is actually opened, which is why the token and the
+  metadata moved out of `configure`. It costs roughly the memory of one web
+  page and a few hundred kilobytes of one-time download, released automatically
+  under memory pressure and rebuilt when it is safe to do so. Closing the chat
+  prepares a fresh one for the next open.
+
+  Nothing to adopt beyond configuring at launch. If `configure(_:)` runs
+  somewhere that makes a background load unwelcome, get in touch — it can be
+  turned off.
+
+### Changed
+
+- `logout()` now also clears the metadata, alongside the user token and the
+  attributes it already cleared, so a logged-out session no longer carries the
+  previous user's context into the next conversation. Nothing to adopt — but if
+  some of your metadata describes the app rather than the user, set it again
+  after `logout()`.
+- An attribute named after one of Emily's own options — `userToken` above all —
+  passed to `setAttributes(_:)` while the chat is on screen is now dropped and
+  reported in the diagnostic log. That is what the documentation always said
+  and what already happened at boot; only the mid-session path disagreed. Use
+  `setUserToken(_:)` for the token.
+- `setAttributes(_:)` now returns `Emily` and is `@discardableResult`, matching
+  the other setters, so the three can be chained. Existing call sites are
+  unaffected.
+
 ## [2.2.0] - 2026-09-04
 
 The SDK now identifies itself to the Emily service on every request, so a
